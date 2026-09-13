@@ -1,0 +1,429 @@
+-- PEERAWAT Script Hub - Red Theme GUI
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TeleportService = game:GetService("TeleportService")
+local Lighting = game:GetService("Lighting")
+
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local RootPart = Character:WaitForChild("HumanoidRootPart")
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    Character = char
+    Humanoid = char:WaitForChild("Humanoid")
+    RootPart = char:WaitForChild("HumanoidRootPart")
+end)
+
+-- Default Settings & Language Data
+local currentLang = "TH"
+local flySpeed = 50
+local isFlying = false
+local infJump = false
+local brightFull = false
+local magnetItems = false
+local aimbotEnabled = false
+
+local TextData = {
+    TH = {
+        Title = "PEERAWAT Hub",
+        Speed = "1. วิ่งเร็ว (Speed)",
+        InfJump = "2. กระโดดไม่จำกัด",
+        TPPlayer = "3. วาร์ปไปหาผู้เล่น (พิมพ์ชื่อด้านล่าง)",
+        Fly = "4. บิน (Fly)",
+        HighJump = "5. กระโดดสูง",
+        LangToggle = "6. ภาษา / Language (TH/EN)",
+        ItemMagnet = "7. ดูดของเข้าตัว",
+        LowServer = "8. ย้ายไปเซิฟคนน้อย",
+        FullBright = "9. ปรับภาพสว่าง (FullBright)",
+        Aimbot = "10. ล็อคหัว (Aimbot)",
+        TPBtn = "วาร์ปทันที",
+        OpenClose = "เปิด/ปิด Menu"
+    },
+    EN = {
+        Title = "PEERAWAT Hub",
+        Speed = "1. WalkSpeed",
+        InfJump = "2. Infinite Jump",
+        TPPlayer = "3. Teleport to Player",
+        Fly = "4. Fly",
+        HighJump = "5. High Jump",
+        LangToggle = "6. Language (TH/EN)",
+        ItemMagnet = "7. Item Magnet",
+        LowServer = "8. Hop Low Server",
+        FullBright = "9. FullBright",
+        Aimbot = "10. Aimbot (Lock Head)",
+        TPBtn = "Teleport Now",
+        OpenClose = "Toggle Menu"
+    }
+}
+
+-- ScreenGui Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "PeerawatHubGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Open/Close Floating Button
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0, 100, 0, 35)
+ToggleBtn.Position = UDim2.new(0.02, 0, 0.2, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.Text = "PEERAWAT UI"
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.TextSize = 14
+ToggleBtn.Parent = ScreenGui
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 8)
+
+-- Main Floating Red Frame
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 360, 0, 480)
+MainFrame.Position = UDim2.new(0.3, 0, 0.15, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+
+-- Title Bar
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, 0, 0, 40)
+TitleLabel.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+TitleLabel.Text = TextData.TH.Title
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.Font = Enum.Font.SourceSansBold
+TitleLabel.TextSize = 20
+TitleLabel.Parent = MainFrame
+Instance.new("UICorner", TitleLabel).CornerRadius = UDim.new(0, 10)
+
+-- Scroll Area
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(0.94, 0, 0.88, 0)
+Scroll.Position = UDim2.new(0.03, 0, 0.1, 0)
+Scroll.BackgroundTransparency = 1
+Scroll.CanvasSize = UDim2.new(0, 0, 2, 0)
+Scroll.ScrollBarThickness = 6
+Scroll.Parent = MainFrame
+
+local UIList = Instance.new("UIListLayout")
+UIList.Parent = Scroll
+UIList.SortOrder = Enum.SortOrder.LayoutOrder
+UIList.Padding = UDim.new(0, 8)
+
+-- Toggle Menu Visibility
+ToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- UI Helper Functions
+local function CreateSwitch(textKey, callback)
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(1, -10, 0, 35)
+    Frame.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
+    Frame.Parent = Scroll
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.75, 0, 1, 0)
+    Label.Position = UDim2.new(0.03, 0, 0, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = TextData[currentLang][textKey]
+    Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Font = Enum.Font.SourceSans
+    Label.TextSize = 14
+    Label.Parent = Frame
+
+    local SwitchBtn = Instance.new("TextButton")
+    SwitchBtn.Size = UDim2.new(0, 50, 0, 25)
+    SwitchBtn.Position = UDim2.new(0.8, 0, 0.15, 0)
+    SwitchBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    SwitchBtn.Text = "OFF"
+    SwitchBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SwitchBtn.Font = Enum.Font.SourceSansBold
+    SwitchBtn.Parent = Frame
+    Instance.new("UICorner", SwitchBtn).CornerRadius = UDim.new(0, 12)
+
+    local state = false
+    SwitchBtn.MouseButton1Click:Connect(function()
+        state = not state
+        if state then
+            SwitchBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
+            SwitchBtn.Text = "ON"
+        else
+            SwitchBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+            SwitchBtn.Text = "OFF"
+        end
+        callback(state)
+    end)
+    return Label
+end
+
+local function CreateSlider(textKey, minVal, maxVal, defaultVal, callback)
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(1, -10, 0, 50)
+    Frame.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
+    Frame.Parent = Scroll
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -10, 0, 20)
+    Label.Position = UDim2.new(0.03, 0, 0, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = TextData[currentLang][textKey] .. ": " .. tostring(defaultVal)
+    Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Font = Enum.Font.SourceSans
+    Label.TextSize = 14
+    Label.Parent = Frame
+
+    local SliderBtn = Instance.new("TextButton")
+    SliderBtn.Size = UDim2.new(0.9, 0, 0, 15)
+    SliderBtn.Position = UDim2.new(0.05, 0, 0.55, 0)
+    SliderBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+    SliderBtn.Text = ""
+    SliderBtn.Parent = Frame
+
+    local SliderFill = Instance.new("Frame")
+    SliderFill.Size = UDim2.new((defaultVal - minVal)/(maxVal - minVal), 0, 1, 0)
+    SliderFill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    SliderFill.Parent = SliderBtn
+
+    local dragging = false
+    SliderBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local percent = math.clamp((input.Position.X - SliderBtn.AbsolutePosition.X) / SliderBtn.AbsoluteSize.X, 0, 1)
+            local value = math.floor(minVal + (maxVal - minVal) * percent)
+            SliderFill.Size = UDim2.new(percent, 0, 1, 0)
+            Label.Text = TextData[currentLang][textKey] .. ": " .. tostring(value)
+            callback(value)
+        end
+    end)
+    return Label
+end
+
+-- --- 10 FUNCTION IMPLEMENTATIONS ---
+
+-- 1. วิ่งเร็ว (ปรับได้ 1-100 สเกลเร็วสูง)
+local L_Speed = CreateSlider("Speed", 16, 300, 16, function(val)
+    if Humanoid then Humanoid.WalkSpeed = val end
+end)
+
+-- 2. กระโดดไม่จำกัด (Inf Jump)
+local L_Inf = CreateSwitch("InfJump", function(state)
+    infJump = state
+end)
+UserInputService.JumpRequest:Connect(function()
+    if infJump and Humanoid then
+        Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+-- 3. Teleport ไปหาผู้เล่น
+local TPFrame = Instance.new("Frame")
+TPFrame.Size = UDim2.new(1, -10, 0, 60)
+TPFrame.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
+TPFrame.Parent = Scroll
+Instance.new("UICorner", TPFrame).CornerRadius = UDim.new(0, 6)
+
+local L_TP = Instance.new("TextLabel")
+L_TP.Size = UDim2.new(1, -10, 0, 20)
+L_TP.Position = UDim2.new(0.03, 0, 0.05, 0)
+L_TP.BackgroundTransparency = 1
+L_TP.Text = TextData.TH.TPPlayer
+L_TP.TextColor3 = Color3.fromRGB(255, 255, 255)
+L_TP.TextXAlignment = Enum.TextXAlignment.Left
+L_TP.Font = Enum.Font.SourceSans
+L_TP.TextSize = 13
+L_TP.Parent = TPFrame
+
+local NameBox = Instance.new("TextBox")
+NameBox.Size = UDim2.new(0.6, 0, 0.4, 0)
+NameBox.Position = UDim2.new(0.03, 0, 0.45, 0)
+NameBox.PlaceholderText = "Target Name"
+NameBox.Parent = TPFrame
+
+local TPBtn = Instance.new("TextButton")
+TPBtn.Size = UDim2.new(0.3, 0, 0.4, 0)
+TPBtn.Position = UDim2.new(0.66, 0, 0.45, 0)
+TPBtn.Text = TextData.TH.TPBtn
+TPBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+TPBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TPBtn.Parent = TPFrame
+
+TPBtn.MouseButton1Click:Connect(function()
+    local targetName = NameBox.Text:lower()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and (p.Name:lower():find(targetName) or p.DisplayName:lower():find(targetName)) then
+            if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                RootPart.CFrame = p.Character.HumanoidRootPart.CFrame
+            end
+            break
+        end
+    end
+end)
+
+-- 4. บิน (Fly)
+local L_Fly = CreateSwitch("Fly", function(state)
+    isFlying = state
+    if isFlying then
+        local bv = Instance.new("BodyVelocity")
+        bv.Name = "PeerawatFly"
+        bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+        bv.Parent = RootPart
+        
+        task.spawn(function()
+            while isFlying and RootPart:FindFirstChild("PeerawatFly") do
+                local camPos = workspace.CurrentCamera.CFrame.LookVector
+                bv.Velocity = camPos * flySpeed
+                task.wait()
+            end
+            if bv then bv:Destroy() end
+        end)
+    else
+        if RootPart:FindFirstChild("PeerawatFly") then RootPart.PeerawatFly:Destroy() end
+    end
+end)
+
+-- 5. กระโดดสูง
+local L_HighJump = CreateSlider("HighJump", 50, 300, 50, function(val)
+    if Humanoid then 
+        Humanoid.UseJumpPower = true
+        Humanoid.JumpPower = val 
+    end
+end)
+
+-- 6. เปลี่ยนภาษา
+local LangFrame = Instance.new("Frame")
+LangFrame.Size = UDim2.new(1, -10, 0, 35)
+LangFrame.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
+LangFrame.Parent = Scroll
+Instance.new("UICorner", LangFrame).CornerRadius = UDim.new(0, 6)
+
+local L_Lang = Instance.new("TextLabel")
+L_Lang.Size = UDim2.new(0.7, 0, 1, 0)
+L_Lang.Position = UDim2.new(0.03, 0, 0, 0)
+L_Lang.BackgroundTransparency = 1
+L_Lang.Text = TextData.TH.LangToggle
+L_Lang.TextColor3 = Color3.fromRGB(255, 255, 255)
+L_Lang.TextXAlignment = Enum.TextXAlignment.Left
+L_Lang.Font = Enum.Font.SourceSans
+L_Lang.Parent = LangFrame
+
+local LangBtn = Instance.new("TextButton")
+LangBtn.Size = UDim2.new(0, 50, 0, 25)
+LangBtn.Position = UDim2.new(0.8, 0, 0.15, 0)
+LangBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+LangBtn.Text = "TH"
+LangBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+LangBtn.Font = Enum.Font.SourceSansBold
+LangBtn.Parent = LangFrame
+
+LangBtn.MouseButton1Click:Connect(function()
+    currentLang = (currentLang == "TH") and "EN" or "TH"
+    LangBtn.Text = currentLang
+    TitleLabel.Text = TextData[currentLang].Title
+    L_TP.Text = TextData[currentLang].TPPlayer
+    TPBtn.Text = TextData[currentLang].TPBtn
+    L_Lang.Text = TextData[currentLang].LangToggle
+    L_Speed.Text = TextData[currentLang].Speed
+    L_Inf.Text = TextData[currentLang].InfJump
+    L_Fly.Text = TextData[currentLang].Fly
+    L_HighJump.Text = TextData[currentLang].HighJump
+end)
+
+-- 7. ดูดของมาหาตัว (Item Magnet)
+local L_Magnet = CreateSwitch("ItemMagnet", function(state)
+    magnetItems = state
+    task.spawn(function()
+        while magnetItems do
+            for _, v in pairs(workspace:GetChildren()) do
+                if v:IsA("Tool") or v:IsA("BasePart") and v.Name:lower():find("item") or v.Name:lower():find("drop") then
+                    if v:IsA("BasePart") then v.CFrame = RootPart.CFrame end
+                    if v:IsA("Tool") and v:FindFirstChild("Handle") then v.Handle.CFrame = RootPart.CFrame end
+                end
+            end
+            task.wait(0.5)
+        end
+    end)
+end)
+
+-- 8. วาร์ปเข้าเซิฟเวอร์คนน้อย
+local HopFrame = Instance.new("Frame")
+HopFrame.Size = UDim2.new(1, -10, 0, 35)
+HopFrame.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
+HopFrame.Parent = Scroll
+Instance.new("UICorner", HopFrame).CornerRadius = UDim.new(0, 6)
+
+local HopBtn = Instance.new("TextButton")
+HopBtn.Size = UDim2.new(1, 0, 1, 0)
+HopBtn.BackgroundTransparency = 1
+HopBtn.Text = TextData.TH.LowServer
+HopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+HopBtn.Font = Enum.Font.SourceSansBold
+HopBtn.Parent = HopFrame
+
+HopBtn.MouseButton1Click:Connect(function()
+    local HttpService = game:GetService("HttpService")
+    local Api = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+    local success, result = pcall(function() return HttpService:JSONDecode(game:HttpGet(Api)) end)
+    if success and result and result.data then
+        for _, server in pairs(result.data) do
+            if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id)
+                break
+            end
+        end
+    end
+end)
+
+-- 9. ภาพสว่าง (FullBright)
+local L_Bright = CreateSwitch("FullBright", function(state)
+    brightFull = state
+    if brightFull then
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 14
+        Lighting.FogEnd = 100000
+        Lighting.GlobalShadows = false
+    else
+        Lighting.Brightness = 1
+        Lighting.GlobalShadows = true
+    end
+end)
+
+-- 10. ล็อคหัวผู้เล่น (Aimbot)
+local L_Aim = CreateSwitch("Aimbot", function(state)
+    aimbotEnabled = state
+end)
+
+RunService.RenderStepped:Connect(function()
+    if aimbotEnabled then
+        local nearestTarget = nil
+        local shortestDist = math.huge
+        local mousePos = UserInputService:GetMouseLocation()
+
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+                local head = p.Character.Head
+                local pos, visible = workspace.CurrentCamera:WorldToViewportPoint(head.Position)
+                if visible then
+                    local dist = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
+                    if dist < shortestDist then
+                        shortestDist = dist
+                        nearestTarget = head
+                    end
+                end
+            end
+        end
+        if nearestTarget then
+            workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, nearestTarget.Position)
+        end
+    end
+end)
